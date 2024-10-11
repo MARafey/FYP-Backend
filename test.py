@@ -1,40 +1,64 @@
 import sys
 from antlr4 import *
-from antlr4.tree.Tree import TerminalNodeImpl
+from antlr4.TokenStreamRewriter import TokenStreamRewriter
 from Files.CLexer import CLexer
 from Files.CParser import CParser
+from Files.CListener import CListener
+from antlr4.tree.Trees import Trees
+from graphviz import Digraph
 
-def add_comment_before_for_loops(tree):
-    for i in range(tree.getChildCount()):
-        child = tree.getChild(i)
-        if isinstance(child, CParser.StatementContext):  # Change this line
-            # Create a comment node
-            comment = f"// Comment: This is a for loop\n"
-            # Create a new terminal node for the comment
-            comment_node = TerminalNodeImpl(CommonToken(1, comment))
-            # Insert the comment node before the for loop
-            tree.children.insert(i, comment_node)
-            i += 1  # Increment the index to skip the newly added comment in the next iteration
-        # Recursively process children
-        add_comment_before_for_loops(child)
+class ForLoopCommenter(CListener):
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.rewriter = TokenStreamRewriter(tokens)
 
-def write_modified_ast_to_file(tree, filename):
-    with open(filename, 'w') as f:
-        f.write(tree.toStringTree())  # Adjust this method if you need a different representation
+    def enterForStatement(self, ctx):
+        self.rewriter.insertBefore(ctx.start, "// This is a for loop\n")
+
+def visualize_tree(tree, parser):
+    dot = Digraph(comment='AST')
+    dot.attr(rankdir='TB')
+
+    def add_node(tree, parent=None):
+        node_id = str(id(tree))
+        label = Trees.getNodeText(tree, parser.ruleNames)
+        dot.node(node_id, label)
+        
+        if parent:
+            dot.edge(str(id(parent)), node_id)
+        
+        for i in range(tree.getChildCount()):
+            child = tree.getChild(i)
+            add_node(child, tree)
+
+    add_node(tree)
+    return dot
 
 def main(argv):
-    # Parse the input C file
-    input_stream = FileStream(argv[1])
+    if len(argv) < 2:
+        print("Usage: python script.py <input_file.c>")
+        sys.exit(1)
+
+    input_file = argv[1]
+    input_stream = FileStream(input_file)
     lexer = CLexer(input_stream)
     stream = CommonTokenStream(lexer)
     parser = CParser(stream)
     tree = parser.compilationUnit()
 
-    # Add comments before for loops
-    add_comment_before_for_loops(tree)
+    # Modify the AST
+    listener = ForLoopCommenter(stream)
+    walker = ParseTreeWalker()
+    walker.walk(listener, tree)
 
-    # Save the modified AST to a new file
-    write_modified_ast_to_file(tree, 'modified_ast.c')
+    # Get the modified code
+    modified_code = listener.rewriter.getDefaultText()
+
+    # Save the modified code to a new file
+    output_filename = 'modified_' + input_file
+    with open(output_filename, 'w') as f:
+        f.write(modified_code)
+    print(f"Modified code saved as {output_filename}")
 
 if __name__ == '__main__':
     main(sys.argv)

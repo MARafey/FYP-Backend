@@ -76,3 +76,15 @@
 : 1728664543:0;git brach
 : 1728664546:0;git bracnh
 : 1728664561:0;git branch
+: 1728669526:0;antlr4 -Dlanguage=Python3 Files/CPP14Lexer.g4 Files/CPP14Parser.g4 Files/CPP14.g4 Files/C.g4
+: 1728669539:0;antlr4
+: 1728669541:0;clear
+: 1728669591:0;antlr4 -Dlanguage=Python3 Files/CPP14Lexer.g4 Files/CPP14Parser.g4 Files/CPP14.g4 Files/C.g4
+: 1728669617:0;# Download ANTLR4 jar file
+: 1728669617:0;wget https://www.antlr.org/download/antlr-4.9.2-complete.jar -P /usr/local/lib
+: 1728669617:0;# Add the directory to CLASSPATH
+: 1728669617:0;echo 'export CLASSPATH=".:/usr/local/lib/antlr-4.9.2-complete.jar:$CLASSPATH"' >> ~/.bashrc
+: 1728669617:0;# Apply the changes
+: 1728669624:0;source ~/.bashrc
+: 1728669630:0;antlr4 -Dlanguage=Python3 Files/CPP14Lexer.g4 Files/CPP14Parser.g4 Files/CPP14.g4 Files/C.g4
+: 1728669632:0;clear
