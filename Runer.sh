@@ -24,6 +24,4 @@ mv CPP14*.* Files/
 mv *.g4 Files/
 
 antlr4 -Dlanguage=Python3 Files/CPP14Lexer.g4 Files/CPP14Parser.g4 Files/CPP14.g4 Files/C.g4
-pip install matplotlib networkx antlr4-python3-runtime pydot
-sudo apt-get install graphviz
-pip install pyvis
+pip install matplotlib networkx antlr4-python3-runtime pydot graphviz pyvis

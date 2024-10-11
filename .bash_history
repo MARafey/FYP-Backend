@@ -68,3 +68,11 @@
 : 1728664420:0;git init
 : 1728664422:0;clear
 : 1728664427:0;git add .
+: 1728664438:0;git commit -m "Adding bash file to make AST"
+: 1728664449:0;git add remote origin https://github.com/MARafey/FYP.git
+: 1728664474:0;git remote add origin https://github.com/MARafey/FYP.git
+: 1728664476:0;clear
+: 1728664537:0;git checkout -b AST
+: 1728664543:0;git brach
+: 1728664546:0;git bracnh
+: 1728664561:0;git branch
