@@ -1,0 +1,7 @@
+Task,Real Time,User Time,Sys Time
+Graph,0m0.048s,0m0.033s,0m0.008s
+Matrix,0m0.004s,0m0.005s,0m0.000s
+Multiplication,0m0.044s,0m0.038s,0m0.000s
+Search,0m0.001s,0m0.000s,0m0.000s
+Sorting,0m0.002s,0m0.002s,0m0.000s
+Substring,0m0.001s,0m0.001s,0m0.000s

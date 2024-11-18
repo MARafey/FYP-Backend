@@ -1,0 +1,373 @@
+Parallel Execution
+Threads: 1
+Graph
+
+real	0m0.021s
+user	0m0.016s
+sys	0m0.000s
+Matrix
+
+real	0m0.002s
+user	0m0.002s
+sys	0m0.000s
+Multiplication
+
+real	0m0.033s
+user	0m0.024s
+sys	0m0.008s
+Search
+
+real	0m0.031s
+user	0m0.009s
+sys	0m0.056s
+Sorting
+
+real	0m0.003s
+user	0m0.003s
+sys	0m0.000s
+Substring
+
+real	0m0.003s
+user	0m0.000s
+sys	0m0.003s
+Threads: 2
+Graph
+
+real	0m0.024s
+user	0m0.029s
+sys	0m0.000s
+Matrix
+
+real	0m0.004s
+user	0m0.003s
+sys	0m0.001s
+Multiplication
+
+real	0m0.040s
+user	0m0.071s
+sys	0m0.000s
+Search
+
+real	0m0.044s
+user	0m0.012s
+sys	0m0.068s
+Sorting
+
+real	0m0.003s
+user	0m0.003s
+sys	0m0.000s
+Substring
+
+real	0m0.004s
+user	0m0.003s
+sys	0m0.000s
+Threads: 3
+Graph
+
+real	0m0.021s
+user	0m0.050s
+sys	0m0.000s
+Matrix
+
+real	0m0.004s
+user	0m0.003s
+sys	0m0.000s
+Multiplication
+
+real	0m0.029s
+user	0m0.055s
+sys	0m0.000s
+Search
+
+real	0m0.038s
+user	0m0.001s
+sys	0m0.063s
+Sorting
+
+real	0m0.003s
+user	0m0.000s
+sys	0m0.003s
+Substring
+
+real	0m0.002s
+user	0m0.002s
+sys	0m0.000s
+Threads: 4
+Graph
+
+real	0m0.011s
+user	0m0.008s
+sys	0m0.000s
+Matrix
+
+real	0m0.003s
+user	0m0.003s
+sys	0m0.000s
+Multiplication
+
+real	0m0.018s
+user	0m0.064s
+sys	0m0.000s
+Search
+
+real	0m0.030s
+user	0m0.012s
+sys	0m0.040s
+Sorting
+
+real	0m0.004s
+user	0m0.005s
+sys	0m0.000s
+Substring
+
+real	0m0.003s
+user	0m0.002s
+sys	0m0.001s
+Threads: 5
+Graph
+
+real	0m0.015s
+user	0m0.015s
+sys	0m0.000s
+Matrix
+
+real	0m0.005s
+user	0m0.004s
+sys	0m0.001s
+Multiplication
+
+real	0m0.024s
+user	0m0.100s
+sys	0m0.000s
+Search
+
+real	0m0.033s
+user	0m0.001s
+sys	0m0.056s
+Sorting
+
+real	0m0.004s
+user	0m0.006s
+sys	0m0.001s
+Substring
+
+real	0m0.002s
+user	0m0.002s
+sys	0m0.000s
+Threads: 6
+Graph
+
+real	0m0.017s
+user	0m0.073s
+sys	0m0.000s
+Matrix
+
+real	0m0.004s
+user	0m0.003s
+sys	0m0.000s
+Multiplication
+
+real	0m0.027s
+user	0m0.103s
+sys	0m0.001s
+Search
+
+real	0m0.061s
+user	0m0.022s
+sys	0m0.097s
+Sorting
+
+real	0m0.007s
+user	0m0.007s
+sys	0m0.000s
+Substring
+
+real	0m0.003s
+user	0m0.003s
+sys	0m0.000s
+Threads: 7
+Graph
+
+real	0m0.022s
+user	0m0.071s
+sys	0m0.012s
+Matrix
+
+real	0m0.009s
+user	0m0.001s
+sys	0m0.006s
+Multiplication
+
+real	0m0.015s
+user	0m0.057s
+sys	0m0.000s
+Search
+
+real	0m0.028s
+user	0m0.024s
+sys	0m0.024s
+Sorting
+
+real	0m0.005s
+user	0m0.013s
+sys	0m0.000s
+Substring
+
+real	0m0.003s
+user	0m0.003s
+sys	0m0.000s
+Threads: 8
+Graph
+
+real	0m0.009s
+user	0m0.035s
+sys	0m0.000s
+Matrix
+
+real	0m0.003s
+user	0m0.003s
+sys	0m0.000s
+Multiplication
+
+real	0m0.013s
+user	0m0.085s
+sys	0m0.000s
+Search
+
+real	0m0.033s
+user	0m0.022s
+sys	0m0.032s
+Sorting
+
+real	0m0.003s
+user	0m0.003s
+sys	0m0.000s
+Substring
+
+real	0m0.003s
+user	0m0.003s
+sys	0m0.000s
+Threads: 9
+Graph
+
+real	0m0.011s
+user	0m0.040s
+sys	0m0.000s
+Matrix
+
+real	0m0.005s
+user	0m0.005s
+sys	0m0.000s
+Multiplication
+
+real	0m0.015s
+user	0m0.041s
+sys	0m0.000s
+Search
+
+real	0m0.051s
+user	0m0.024s
+sys	0m0.060s
+Sorting
+
+real	0m0.007s
+user	0m0.008s
+sys	0m0.000s
+Substring
+
+real	0m0.004s
+user	0m0.004s
+sys	0m0.000s
+Threads: 10
+Graph
+
+real	0m0.013s
+user	0m0.001s
+sys	0m0.023s
+Matrix
+
+real	0m0.008s
+user	0m0.001s
+sys	0m0.010s
+Multiplication
+
+real	0m0.025s
+user	0m0.138s
+sys	0m0.000s
+Search
+
+real	0m0.054s
+user	0m0.027s
+sys	0m0.078s
+Sorting
+
+real	0m0.013s
+user	0m0.041s
+sys	0m0.000s
+Substring
+
+real	0m0.005s
+user	0m0.004s
+sys	0m0.000s
+Threads: 11
+Graph
+
+real	0m0.014s
+user	0m0.032s
+sys	0m0.000s
+Matrix
+
+real	0m0.008s
+user	0m0.001s
+sys	0m0.007s
+Multiplication
+
+real	0m0.017s
+user	0m0.088s
+sys	0m0.000s
+Search
+
+real	0m0.037s
+user	0m0.029s
+sys	0m0.037s
+Sorting
+
+real	0m0.022s
+user	0m0.129s
+sys	0m0.000s
+Substring
+
+real	0m0.020s
+user	0m0.065s
+sys	0m0.000s
+Threads: 12
+Graph
+
+real	0m0.040s
+user	0m0.285s
+sys	0m0.100s
+Matrix
+
+real	0m0.014s
+user	0m0.034s
+sys	0m0.000s
+Multiplication
+
+real	0m0.032s
+user	0m0.283s
+sys	0m0.008s
+Search
+
+real	0m0.051s
+user	0m0.022s
+sys	0m0.063s
+Sorting
+
+real	0m0.028s
+user	0m0.218s
+sys	0m0.010s
+Substring
+
+real	0m0.015s
+user	0m0.075s
+sys	0m0.000s

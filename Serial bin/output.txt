@@ -1,0 +1,30 @@
+Graph
+
+real	0m0.048s
+user	0m0.033s
+sys	0m0.008s
+Matrix
+
+real	0m0.004s
+user	0m0.005s
+sys	0m0.000s
+Multiplication
+
+real	0m0.044s
+user	0m0.038s
+sys	0m0.000s
+Search
+
+real	0m0.001s
+user	0m0.000s
+sys	0m0.000s
+Sorting
+
+real	0m0.002s
+user	0m0.002s
+sys	0m0.000s
+Substring
+
+real	0m0.001s
+user	0m0.001s
+sys	0m0.000s
