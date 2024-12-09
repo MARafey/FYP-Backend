@@ -1,6 +1,7 @@
 import re
 from collections import defaultdict
 
+# This function will check if the given loop block is parallelizable or not.
 def Reduction_aaplication(Loop_Block):
     """
     Checks if reduction is possible in the given loop block.
@@ -38,7 +39,13 @@ def Reduction_aaplication(Loop_Block):
 
     return detected_reductions
 
+# This function will parallelize the given loop block if it is parallelizable.
 def parallelizing_loop(Loop_Bloc):
+
+    # Check if there is any input/output statement in the loop block
+    if check_input_output(Loop_Bloc):
+        return Loop_Bloc
+
     Parallelized_string = "#pragma omp parallel for"
 
     Reduction_line = Reduction_aaplication(Loop_Bloc)
@@ -50,6 +57,34 @@ def parallelizing_loop(Loop_Bloc):
         Parallelized_string += " schedule(static)"
 
     return Parallelized_string
+
+# This function checks if there is 'cin', 'cout', 'printf' or any type of input/output statement in the given code block.
+def check_input_output(Loop_Block):
+    """
+    Checks if there is any input/output statement in the given loop block.
+    If there is any input/output statement, returns True.
+    Otherwise, returns False.
+
+    Args:
+        Loop_Block (str): The code block of a single loop.
+
+    Returns:
+        bool: True if there is any input/output statement, False otherwise.
+    """
+    # Patterns to identify input/output statements
+    io_patterns = [
+        r"cin\s*>>",
+        r"cout\s*<<",
+        r"printf\s*\(",
+        r"scanf\s*\("
+    ]
+
+    # Check for input/output patterns
+    for pattern in io_patterns:
+        if re.search(pattern, Loop_Block):
+            return True
+
+    return False
 
 # This function will return a list of all the loop blocks present in the given C or C++ file.
 def LoopBlocks(Code_String):
@@ -137,6 +172,7 @@ def analyze_data_dependency(code_snippet):
 
     return dependencies
 
+# This function will write the content to the file.
 def writing_code_to_file(file_path, content):
     try:
         with open(file_path, 'w') as file:
@@ -144,6 +180,7 @@ def writing_code_to_file(file_path, content):
     except IOError:
         print("An error occurred while writing to the file.")
 
+# This function will replace the loop block with the parallelized block in the code string.
 def Replacing_Loop_Block(Loop_Block, Parallelized_Block, Code_String):
     '''
     This function will replace the loop block with the parallelized block in the code string.
