@@ -249,7 +249,7 @@ def Variable_in_Loop(Loop_Block):
 
     return Inside_Variable, Outside_Variable
 
-def Parinomo(SCode):
+def Parinomo(SCode, core_type, ram_type, processors_count):
     Loop_Blocks = LoopBlocks(SCode)
 
     # checking if the loop can be parallelized or not if not removeing that loop block
@@ -267,4 +267,6 @@ def Parinomo(SCode):
     # replacing 'int main()' with 'int main(int argc, char *argv[])'
     Pcode = Pcode.replace('int main()', 'int main(int argc, char *argv[])')
 
-    return "#include <omp.h>" + Pcode
+    thread_count = f"omp_set_num_threads({processors_count-2});\n"
+
+    return "#include <omp.h>\n"+ thread_count + Pcode

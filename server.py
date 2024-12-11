@@ -22,8 +22,9 @@ def uploadcode():
     core_type = data.get('core_type')
     ram_type = data.get('ram_type')
     Scode = data.get('code')
+    processors_count = data.get('processors_count')
 
-    Pcode = Parinomo(Scode)
+    Pcode = Parinomo(Scode, core_type, ram_type,processors_count)
 
     if not core_type or not ram_type or not Scode:
         return jsonify({'message': 'All fields are required!', 'status': 'fail'}), 400
