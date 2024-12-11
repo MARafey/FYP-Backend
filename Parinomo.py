@@ -42,10 +42,6 @@ def Reduction_aaplication(Loop_Block):
 # This function will parallelize the given loop block if it is parallelizable.
 def parallelizing_loop(Loop_Bloc):
 
-    # Check if there is any input/output statement in the loop block
-    if check_input_output(Loop_Bloc):
-        return Loop_Bloc
-
     Parallelized_string = "#pragma omp parallel for"
 
     Reduction_line = Reduction_aaplication(Loop_Bloc)
@@ -56,6 +52,7 @@ def parallelizing_loop(Loop_Bloc):
     else:
         Parallelized_string += " schedule(static)"
 
+    # print (Parallelized_string)
     return Parallelized_string
 
 # This function checks if there is 'cin', 'cout', 'printf' or any type of input/output statement in the given code block.
@@ -73,10 +70,10 @@ def check_input_output(Loop_Block):
     """
     # Patterns to identify input/output statements
     io_patterns = [
-        r"cin\s*>>",
-        r"cout\s*<<",
-        r"printf\s*\(",
-        r"scanf\s*\("
+        r"cin\s*>> [^;]+;",
+        r"cout\s*<< [^;]+;",
+        r"printf\s*\( [^;]+;",
+        r"scanf\s*\( [^;]+;",
     ]
 
     # Check for input/output patterns
@@ -89,31 +86,55 @@ def check_input_output(Loop_Block):
 # This function will return a list of all the loop blocks present in the given C or C++ file.
 def LoopBlocks(Code_String):
     Loop_Blocks = []
-    Loop_Stack = []
     i = 0  # Initialize the index manually
 
     while i < len(Code_String):
         # Check for the keyword 'for'
         if Code_String[i:i + 3] == 'for':
             start_index = i
-            Block = ""
+            Block = "for "
 
-            # Find the start of the loop block, which is the next '{' after the 'for' keyword
-            while Code_String[i] != '{' and i < len(Code_String):
+            space = True
+            # Find the start of the loop body
+            while i < len(Code_String) and Code_String[i] != '(':
                 i += 1
-            i += 1  # Move past the '{'
+                space = False
+            
+            if space:
+                Block = 'for'
 
-            Block += Code_String[start_index: i]
+            if i < len(Code_String):
+                # Include the for loop condition
+                while i < len(Code_String) and Code_String[i] != ')':
+                    Block += Code_String[i]
+                    i += 1
+                Block += Code_String[i]  # Include the closing ')'
+                i += 1  # Move past the closing ')'
 
-            Loop_Stack.append('{')
-            # Find the end of the loop block
-            while Loop_Stack and i < len(Code_String):
-                if Code_String[i] == '{':
-                    Loop_Stack.append('{')
-                elif Code_String[i] == '}':
-                    Loop_Stack.pop()
-                Block += Code_String[i]
+            # Handle loop body
+            if i < len(Code_String) and (Code_String[i] == '{' or Code_String[i + 1] == '{'):
+                if Code_String[i] != '{':
+                    i += 1
+                Loop_Stack = ['{']
+                Block += Code_String[i]  # Include '{'
                 i += 1
+
+                # Find the end of the block
+                while Loop_Stack and i < len(Code_String):
+                    if Code_String[i] == '{':
+                        Loop_Stack.append('{')
+                    elif Code_String[i] == '}':
+                        Loop_Stack.pop()
+                    Block += Code_String[i]
+                    i += 1
+            else:
+                # Single-line loop body
+                while i < len(Code_String) and Code_String[i] != ';':
+                    Block += Code_String[i]
+                    i += 1
+                if i < len(Code_String) and Code_String[i] == ';':
+                    Block += Code_String[i]  # Include ';'
+                    i += 1
 
             Loop_Blocks.append(Block)
         else:
@@ -184,13 +205,15 @@ def writing_code_to_file(file_path, content):
 def Replacing_Loop_Block(Loop_Block, Parallelized_Block, Code_String):
     '''
     This function will replace the loop block with the parallelized block in the code string.
-        :param Loop_Block:
-        :param Parallelized_Block:
-        :param Code_String:
-        :return: Parellized code string
+        :param Loop_Block: List of original loop blocks in the code.
+        :param Parallelized_Block: List of corresponding parallelized loop blocks.
+        :param Code_String: Original code as a string.
+        :return: Code string with parallelized blocks.
     '''
     for i in range(len(Loop_Block)):
+        # finding the loop block in the code string
         Code_String = Code_String.replace(Loop_Block[i], Parallelized_Block[i])
+        
     return Code_String
 
 # This function will open the C or C++ file and get content from that file
@@ -211,16 +234,22 @@ def open_file(file_path):
     except IOError:
         print("An error occurred while reading the file.")
 
-
 def Parinomo(SCode):
     Loop_Blocks = LoopBlocks(SCode)
+
+    # checking if the loop can be parallelized or not if not removeing that loop block
+    for Loop_Block in Loop_Blocks:
+            if check_input_output(Loop_Block):
+                Loop_Blocks.remove(Loop_Block)
+
     parall_Loop_Block = []
     for Loop_Block in Loop_Blocks:
-        parall_Loop_Block.append(parallelizing_loop(Loop_Block) + '\n' + Loop_Block)
-
+        ParallelBlock = parallelizing_loop(Loop_Block) + '\n' + Loop_Block
+        parall_Loop_Block.append(ParallelBlock)
+        
     Pcode = Replacing_Loop_Block(Loop_Blocks, parall_Loop_Block, SCode)
 
     # replacing 'int main()' with 'int main(int argc, char *argv[])'
     Pcode = Pcode.replace('int main()', 'int main(int argc, char *argv[])')
 
-    return "#include <omp.h>\n" + Pcode
+    return "#include <omp.h>" + Pcode
