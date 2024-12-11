@@ -1,0 +1,33 @@
+version: "3.8"
+services:
+  backend:
+    build:
+      context: ./Backend
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+    environment:
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_APP=server.py
+      - FLASK_ENV=development # Enables Flask's debug mode with auto-reload
+    volumes:
+      - ./Backend:/usr/src/app
+      - /usr/src/app/venv # Exclude virtual environment if present
+    command: flask run
+  frontend:
+    build:
+      context: ./Frontend
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+    environment:
+      - REACT_APP_API_URL=http://backend:5000
+    volumes:
+      - ./Frontend:/usr/src/app
+      - /usr/src/app/node_modules # Ensures node_modules are not overwritten
+    command: npm start # Enables React's hot reload
+networks:
+  app-network:
+    driver: bridge
