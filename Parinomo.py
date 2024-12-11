@@ -234,6 +234,21 @@ def open_file(file_path):
     except IOError:
         print("An error occurred while reading the file.")
 
+# This function will check the variable that are declared in the loop block and the one that come from outside the loop block.
+def Variable_in_Loop(Loop_Block):
+    Outside_Variable = []
+    Inside_Variable = []
+
+    # finding the variables that are declared inside the loop block
+    # The vaiable can be any primitive data type or any user defined data type
+    Inside_Variable = re.findall(r'\b(?:int|float|double|char|string|vector|list|set|map)\s+\w+\b', Loop_Block)
+
+    # finding the variables that are declared outside the loop block
+    # The vaiable can be any primitive data type or any user defined data type
+    Outside_Variable = re.findall(r'\b(?:int|float|double|char|string|vector|list|set|map)\s+\w+\b', Loop_Block)
+
+    return Inside_Variable, Outside_Variable
+
 def Parinomo(SCode):
     Loop_Blocks = LoopBlocks(SCode)
 
@@ -246,7 +261,7 @@ def Parinomo(SCode):
     for Loop_Block in Loop_Blocks:
         ParallelBlock = parallelizing_loop(Loop_Block) + '\n' + Loop_Block
         parall_Loop_Block.append(ParallelBlock)
-        
+
     Pcode = Replacing_Loop_Block(Loop_Blocks, parall_Loop_Block, SCode)
 
     # replacing 'int main()' with 'int main(int argc, char *argv[])'
