@@ -1,0 +1,45 @@
+#include <iostream>
+using namespace std;
+
+int sum1D(int arr[], int size) {
+    int sum = 0;
+    for (int i = 0; i < size; i++) {
+        sum += arr[i];
+    }
+    return sum;
+}
+
+int sum2D(int arr[][3], int rows, int cols) { // Assuming fixed column size
+    int sum = 0;
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            sum += arr[i][j];
+        }
+    }
+    return sum;
+}
+int sum3D(int arr[][3][3], int x, int y, int z) { // Assuming fixed size for y and z
+    int sum = 0;
+    for (int i = 0; i < x; i++) {
+        for (int j = 0; j < y; j++) {
+            for (int k = 0; k < z; k++) {
+                sum += arr[i][j][k];
+            }
+        }
+    }
+    return sum;
+}
+int main() {
+    int arr1D[] = {1, 2, 3, 4, 5};
+    int size1D = sizeof(arr1D) / sizeof(arr1D[0]);
+    cout << "Sum of 1D array: " << sum1D(arr1D, size1D) << endl;
+
+    int arr2D[2][3] = {{1, 2, 3}, {4, 5, 6}};
+    cout << "Sum of 2D array: " << sum2D(arr2D, 2, 3) << endl;
+
+    int arr3D[2][3][3] = {{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}},
+                           {{10, 11, 12}, {13, 14, 15}, {16, 17, 18}}};
+    cout << "Sum of 3D array: " << sum3D(arr3D, 2, 3, 3) << endl;
+
+    return 0;
+}

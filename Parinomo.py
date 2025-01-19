@@ -1,5 +1,249 @@
 import re
 from collections import defaultdict
+import json
+from typing import Any
+
+def calculate_tile_size(ram_size, array_type, element_size=4, reserve_memory=0.1):
+    """
+    Calculate the tile size based on RAM, array dimension type, and element size.
+
+    Args:
+        ram_size (int): Total available RAM in bytes.
+        array_type (str): The type of array ("1D array", "2D array", "3D array").
+        element_size (int): The size of one element in bytes (default: 4 bytes for float).
+        reserve_memory (float): Fraction of memory to reserve for system use (default: 10%).
+
+    Returns:
+        int: The tile size (number of elements per tile).
+    """
+
+    ram_size = ram_size * 1024**3  # Convert GB to bytes
+
+    # Calculate usable memory
+    usable_memory = ram_size * (1 - reserve_memory)
+    
+    # Depending on the array type, calculate the size of one tile
+    if array_type == "1D array":
+        # For a 1D array, the tile size is just a number of elements
+        tile_size = usable_memory // element_size
+    elif array_type == "2D array":
+        # For a 2D array, assume a square submatrix (tile)
+        # Calculate the number of elements that can fit in the available memory
+        side_length = int((usable_memory // (element_size * element_size))**0.5)  # sqrt of memory fitting a square
+        tile_size = side_length * side_length
+    elif array_type == "3D array":
+        # For a 3D array, assume a cubic submatrix (tile)
+        side_length = int((usable_memory // (element_size * element_size * element_size))**(1/3))  # cube root
+        tile_size = side_length * side_length * side_length
+    else:
+        tile_size = 0  # No valid array type
+        print("Invalid array type")
+    
+    return tile_size
+
+def determine_array_access_type(loop_string):
+    """
+    Determines if the loop accesses a 1D, 2D, 3D array, or single variables.
+    Returns the highest dimension array access found.
+
+    Args:
+        loop_string (str): The string containing the loop code.
+
+    Returns:
+        str: The type of array access ("1D array", "2D array", "3D array", or "Single variables").
+    """
+    # Regular expressions to detect different array access patterns
+    pattern_3d = r'[A-Za-z_]+\s*\[[A-Za-z0-9_]+\]\s*\[[A-Za-z0-9_]+\]\s*\[[A-Za-z0-9_]+\]'
+    pattern_2d = r'[A-Za-z_]+\s*\[[A-Za-z0-9_]+\]\s*\[[A-Za-z0-9_]+\]'
+    pattern_1d = r'[A-Za-z_]+\s*\[[A-Za-z0-9_]+\]'
+    pattern_nd = r'[A-Za-z_]+\s*\[[A-Za-z0-9_]+\]'
+    
+    # Check for array accesses from highest to lowest dimension
+    if re.search(pattern_3d, loop_string):
+        return "3D array"
+    elif re.search(pattern_2d, loop_string):
+        return "2D array"
+    elif re.search(pattern_1d, loop_string):
+        return "1D array"
+    elif re.search(pattern_nd, loop_string):
+        # finding the value for nD array
+        # return "nD array"
+        n = 0
+        for match in re.finditer(pattern_nd, loop_string):
+            n += 1
+        return f"{n}D array"
+    else:
+        return "Single variables"
+
+def generate_tiled_loop(loop_string, tile_size):
+    """
+    Converts a nested loop string into a tiled version.
+
+    Args:
+        loop_string (str): The original loop as a string.
+        tile_size (int): The size of the tile for tiling.
+
+    Returns:
+        str: The loop tiled version.
+    """
+    # Match the loop pattern using regex
+    loop_pattern = re.compile(
+        r"\s*for\s*\((int\s+)?(?P<var>[a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(?P<start>[a-zA-Z_][a-zA-Z0-9_]*|\d+);\s*"
+        r"(?P=var)\s*<\s*(?P<end>[a-zA-Z_][a-zA-Z0-9_]*|\d+);\s*(?P=var)\+\+\)"
+    )
+
+
+    # Find all loops in the input string
+    loops = loop_pattern.findall(loop_string)
+    
+    if not loops:
+        return "Invalid or no loop found in the input string."
+
+    # Generate tiled version
+    tiled_loops = []
+    current_level = 0
+    pos = 0
+
+    while pos < len(loop_string):
+        match = loop_pattern.search(loop_string, pos)
+        if not match:
+            tiled_loops.append(loop_string[pos:])
+            break
+
+        # Add content before the loop
+        tiled_loops.append(loop_string[pos:match.start()])
+
+        var, start, end = match.group("var"), match.group("start"), match.group("end")
+
+        # Add the outer tiled loop
+        tiled_loops.append(
+            f"for (int {var}_tile = {start}; {var}_tile < {end}; {var}_tile += {tile_size}) {{\n"
+        )
+        # Add the inner loop
+        tiled_loops.append(
+            f"    for (int {var} = {var}_tile; {var} < std::min({var}_tile + {tile_size}, {end}); {var}++) {{\n"
+        )
+
+        # Update the position
+        pos = match.end()
+        current_level += 1
+
+    # Close all opened loops
+    tiled_loops.extend("    }\n" * current_level)
+
+    return ''.join(tiled_loops)
+
+def Operation_split(string):
+    '''
+    This function will split the string on the basis of operations
+    Args:
+        string: String to be splitted
+
+    Returns:
+        List of splitted string
+    '''
+    # splitting on bases of operations
+    possible_operations = ['<', '>', '<=', '>=', '==', '!=', '&&', '||']
+
+    condition_split = None
+    for operation in possible_operations:
+        if operation in string:
+            condition_split = string.split(operation)
+            break
+
+    return condition_split
+
+# handling Break conditions
+def Soft_Break(function_str):
+    """
+    Convert a C/C++ function to its OpenMP equivalent by handling break and return statements.
+    
+    Args:
+        function_str (str): The input C/C++ function as a string
+        
+    Returns:
+        str: The converted OpenMP version of the function
+    """
+    # Extract function signature
+    signature_match = re.match(r'^(.*?)\s*\{', function_str, re.DOTALL)
+    if not signature_match:
+        raise ValueError("Invalid function format")
+    
+    signature = signature_match.group(1)
+    
+    # Extract function body
+    body = function_str[signature_match.end():].strip()[:-1]  # Remove the last '}'
+    
+    # Find the for loop
+    for_loop_match = re.search(r'for\s*\((.*?);(.*?);(.*?)\)', body, re.DOTALL)
+    if not for_loop_match:
+        raise ValueError("No for loop found in function")
+    
+    # Extract loop components
+    init, condition, increment = [s.strip() for s in for_loop_match.groups()]
+    
+    # Extract condition variables
+    condition_vars = re.findall(r'([a-zA-Z_]\w*)', condition)
+    loop_var = re.findall(r'([a-zA-Z_]\w*)\s*=', init)[0]
+    limit_var = [var for var in condition_vars if var != loop_var][0]
+    
+    # Check if there's a return statement in the loop
+    has_return = 'return' in body
+    
+    # Create the parallel variable if needed
+    parallel_var = ""
+    if has_return:
+        return_val = re.search(r'return\s+([^;]+);', body).group(1)
+        if return_val.isdigit() or return_val == '-1':
+            parallel_var = f"    int parallel_temp = {return_val};\n"
+        else:
+            parallel_var = f"    {signature.split()[0]} parallel_temp = {return_val};\n"
+    
+    # Process the loop body
+    loop_body = re.search(r'for\s*\([^{]*\)\s*{(.*?)}', body, re.DOTALL).group(1)
+    
+    # Replace return statements with parallel variable assignment
+    if has_return:
+        loop_body = re.sub(r'return\s+([^;]+);', 
+                          f'parallel_temp = \\1;\n        {loop_var} = {limit_var};', 
+                          loop_body)
+    
+    # Replace break statements
+    loop_body = re.sub(r'break;', f'{loop_var} = {limit_var};', loop_body) + '}\n'
+    
+    # Add check for early termination
+    if has_return:
+        loop_body += f'\n        if (parallel_temp != {return_val}) {loop_var} = {limit_var};'
+    
+    # Construct the OpenMP version
+    openmp_version = f"{signature} {{\n"
+    if parallel_var:
+        openmp_version += parallel_var
+    
+    # Add OpenMP pragma
+    if has_return:
+        openmp_version += "    #pragma omp parallel for shared(parallel_temp)\n"
+    else:
+        # Determine shared variables from the loop body
+        shared_vars = set(re.findall(r'([a-zA-Z_]\w*)\s*=', loop_body)) - {loop_var}
+        if shared_vars:
+            shared_list = ", ".join(shared_vars)
+            openmp_version += f"    #pragma omp parallel for shared({shared_list})\n"
+        else:
+            openmp_version += "    #pragma omp parallel for \n"
+    
+    # Add the modified for loop
+    openmp_version += f"    for ({init}; {condition}; {increment}) {{\n"
+    openmp_version += "        " + loop_body.replace("\n", "\n        ") + "\n"
+    openmp_version += "    }\n"
+    
+    # Add return statement if needed
+    if has_return:
+        openmp_version += "    return parallel_temp;\n"
+    
+    openmp_version += "}"
+    
+    return openmp_version
 
 # This function will check if the given loop block is parallelizable or not.
 def Reduction_aaplication(Loop_Block):
@@ -43,9 +287,9 @@ def Reduction_aaplication(Loop_Block):
 def parallelizing_loop(Loop_Bloc):
 
     Parallelized_string = "#pragma omp parallel for"
-
+    # print("Here")
     Reduction_line = Reduction_aaplication(Loop_Bloc)
-
+    # print(Reduction_line)
     if Reduction_line:
         for line in Reduction_line:
             Parallelized_string += f" {line}"
@@ -74,6 +318,13 @@ def check_input_output(Loop_Block):
         r"cout\s*<< [^;]+;",
         r"printf\s*\( [^;]+;",
         r"scanf\s*\( [^;]+;",
+        r"getline\s*\( [^;]+;",
+        # multiple input/output statements
+        r"cin\s*>> [^;]+;\s*cout\s*<< [^;]+;",
+        r"printf\s*\( [^;]+;\s*printf\s*\( [^;]+;",
+        r"scanf\s*\( [^;]+;\s*scanf\s*\( [^;]+;",
+        r"getline\s*\( [^;]+;\s*getline\s*\( [^;]+;",
+
     ]
 
     # Check for input/output patterns
@@ -111,6 +362,14 @@ def LoopBlocks(Code_String):
                 Block += Code_String[i]  # Include the closing ')'
                 i += 1  # Move past the closing ')'
 
+            semi_colum_count = 0
+            for j in range(0, len(Block)):
+                if Block[j] == ';':
+                    semi_colum_count += 1
+
+            if semi_colum_count < 2:
+                continue
+
             # Handle loop body
             if i < len(Code_String) and (Code_String[i] == '{' or Code_String[i + 1] == '{'):
                 if Code_String[i] != '{':
@@ -135,6 +394,8 @@ def LoopBlocks(Code_String):
                 if i < len(Code_String) and Code_String[i] == ';':
                     Block += Code_String[i]  # Include ';'
                     i += 1
+
+
 
             Loop_Blocks.append(Block)
         else:
@@ -201,6 +462,127 @@ def writing_code_to_file(file_path, content):
     except IOError:
         print("An error occurred while writing to the file.")
 
+# This function will count the number of for loops in the given code.
+def getCountofForLoops(code):
+    count = 0
+    i = 0
+    while i < len(code):
+        if code[i:i + 3] == 'for':
+            count += 1
+        i += 1
+    return count
+
+# This function finds start and end index of substring in the string
+def find_substring(string, substring):
+    start = string.index(substring)
+    end = start + len(substring)
+    return start, end
+
+def Complexity_of_loop(Block: str) -> int | tuple[int, Any]:
+    """
+    This function calculates the complexity of the given loop block, based on provided rules.
+    Rules:
+        This function will return the complexity of the loop block.
+        Things used:
+            1. The loop condition
+            2. The number of nested loops and their conditions
+            3. The number of variables used in the loop
+                a. single variable have complexity 1
+                b. multiple dimension array variables have complexity 2
+            4. The number of operations in the loop
+                a. Binary operation have complexity 1 i.e (&, |, ^)
+                b. Arithmatic operations have complexity 2 i.e (+, -, *, /, %)
+                c. Unary operations have complexity 1.5 i.e (++, --)
+                d. Assignment operations have complexity 1 i.e (=)
+            5. The total number of lines within the loop excluding the loop condition line and brackets '{}' lines
+            6. The number of function calls within the loop block
+                a. Complexity of function depends upon the passed arguments and the return type of the function
+                b. In case of passing array the complexity will be 3
+                c. In case of passing single variable the complexity will be 1
+            7. Incase the loop condition has a hard-coded value, the complexity will be that value multiplied by 0.2
+    Parameters:
+        Block (str): The loop block as a string
+
+    Returns:
+        float: The total calculated complexity of the loop block
+    """
+    complexity = 0.0
+
+    # 1. Analyze the loop condition
+    loop_condition = re.search(r'for\s*\((.*?)\)', Block)
+
+    # Check if the loop condition has a hard-coded value
+    value = re.findall(r'(\d+)', Block)
+    # print(value)
+    if value:
+        # print(value)
+        for v in value:
+            if int(v) > 1000000:
+                complexity += float(v) * 0.2
+            else:
+                complexity -= float(v) * 0.42 # 42 is a joke because during random seed we use 42 and I never understood why
+            # print(complexity)
+
+    if loop_condition:
+        condition_content = loop_condition.group(1)
+        # Assume each variable in the condition contributes a base complexity of 1
+        complexity += condition_content.count(',') + 1  # Number of variables in loop condition
+
+    # 2. Count nested loops
+    nested_loops = re.findall(r'for\s*\([^)]*\)', Block)
+    complexity += len(nested_loops) * 2  # Each nested loop adds 2 to complexity
+
+    # 3. Analyze variables in the loop
+    variables = re.findall(r'([a-zA-Z_]\w*(?:\[[^\]]*\])*)', Block)
+    for var in variables:
+        if '[' in var:  # It's a multi-dimensional variable
+            complexity += 2
+        else:  # Single variable
+            complexity += 1
+
+    # 4. Count operations
+    binary_ops = re.findall(r'[\&\|\^]', Block)  # Binary operations
+    arithmetic_ops = re.findall(r'[+\-*/%]', Block)  # Arithmetic operations
+    unary_ops = re.findall(r'\+\+|--', Block)  # Unary operations
+    assignment_ops = re.findall(r'=', Block)  # Assignment operations
+
+    complexity += len(binary_ops) * 1  # Each binary operation adds 1
+    complexity += len(arithmetic_ops) * 2  # Each arithmetic operation adds 2
+    complexity += len(unary_ops) * 1.5  # Each unary operation adds 1.5
+    complexity += len(assignment_ops) * 1  # Each assignment operation adds 1
+
+    # 5. Total number of lines inside the loop (excluding brackets and loop header)
+    lines = Block.split('\n')
+    meaningful_lines = [line for line in lines if
+                        line.strip() and not line.strip().startswith('for') and not line.strip().startswith(
+                            '{') and not line.strip().startswith('}')]
+    complexity += len(meaningful_lines)
+
+    # 6. Function calls within the loop
+    function_calls = re.findall(r'\b\w+\s*\(([^)]*)\)', Block)
+    for call in function_calls:
+        # Check what is passed to the function
+        if '[' in call:  # Passing array
+            complexity += 3
+        else:  # Single variable
+            complexity += 1
+
+    # classifying the complexity into 1 to 5
+    # 5 being the most complex and 1 being the least complex
+
+    complexity = round(complexity)
+
+    if complexity > 50:
+        return 5 , complexity
+    elif complexity > 40:
+        return 4 , complexity
+    elif complexity > 30:
+        return 3 , complexity
+    elif complexity > 20:
+        return 2 , complexity
+    else:
+        return 1 , complexity
+
 # This function will replace the loop block with the parallelized block in the code string.
 def Replacing_Loop_Block(Loop_Block, Parallelized_Block, Code_String):
     '''
@@ -210,10 +592,18 @@ def Replacing_Loop_Block(Loop_Block, Parallelized_Block, Code_String):
         :param Code_String: Original code as a string.
         :return: Code string with parallelized blocks.
     '''
+
+    # Code_String = '\n'+Code_String.strip().replace('  ', '').replace('\n\n', '\n')
     for i in range(len(Loop_Block)):
-        # finding the loop block in the code string
-        Code_String = Code_String.replace(Loop_Block[i], Parallelized_Block[i])
-        
+        str = Loop_Block[i]
+        str = str.strip().replace('{', ' {')
+        str = str.strip().replace('  ', ' ')
+        str = indent_cpp_code(str)
+        # print('*'*20 + '\n'+str)
+        # print('*'*20 + '\n'+ Parallelized_Block[i])
+        # print('*'*20 + '\n'+Code_String)
+        Code_String = Code_String.replace(str, Parallelized_Block[i])
+    # print(Code_String)
     return Code_String
 
 # This function will open the C or C++ file and get content from that file
@@ -249,24 +639,67 @@ def Variable_in_Loop(Loop_Block):
 
     return Inside_Variable, Outside_Variable
 
+import subprocess
+
+def indent_cpp_code(code: str, style: str = "LLVM") -> str:
+    """Formats C++ code using clang-format."""
+    try:
+        result = subprocess.run(
+            ["clang-format", f"--style={style}"], 
+            input=code, 
+            text=True, 
+            capture_output=True, 
+            check=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print("Error formatting code:", e)
+        return code
+
 def Parinomo(SCode, core_type, ram_type, processors_count):
+
+    # making a json file to store loops and their tilled version and parallelized version if avalible with complexity
+    # to return at the end
+    All_data = {}
+
+    SCode = indent_cpp_code(SCode)
+
     Loop_Blocks = LoopBlocks(SCode)
 
-    # checking if the loop can be parallelized or not if not removeing that loop block
-    for Loop_Block in Loop_Blocks:
-            if check_input_output(Loop_Block):
-                Loop_Blocks.remove(Loop_Block)
+    count = 1
 
-    parall_Loop_Block = []
-    for Loop_Block in Loop_Blocks:
-        ParallelBlock = parallelizing_loop(Loop_Block) + '\n' + Loop_Block
-        parall_Loop_Block.append(ParallelBlock)
+    for loops in Loop_Blocks:
 
-    Pcode = Replacing_Loop_Block(Loop_Blocks, parall_Loop_Block, SCode)
+        All_data[count] = {}
+        All_data[count]['Loop'] = loops
 
-    # replacing 'int main()' with 'int main(int argc, char *argv[])'
-    Pcode = Pcode.replace('int main()', 'int main(int argc, char *argv[])')
+        if check_input_output(loops):
+            array_type = determine_array_access_type(loops)
+            if array_type != "Single variables":
+                tile_size = calculate_tile_size(ram_type, array_type)
+                tiled_loop = generate_tiled_loop(loops, tile_size)
+                tiled_loop = indent_cpp_code(tiled_loop)
+                All_data[count]['Tiled_Loop'] = tiled_loop
+                All_data[count]['Parallelized_Loop'] = 'Not Parallelizable'
+        else:
+            ParallelBlock = indent_cpp_code(loops)
+            if 'break' in ParallelBlock or 'return' in ParallelBlock:
+                All_data[count]['Parallelized_Loop'] = indent_cpp_code(Soft_Break(ParallelBlock)) + '\n' + ParallelBlock
+            else:
+                All_data[count]['Parallelized_Loop'] = indent_cpp_code(parallelizing_loop(ParallelBlock)) + '\n' + ParallelBlock
 
-    thread_count = f"omp_set_num_threads({processors_count-2});\n"
 
-    return "#include <omp.h>\n"+ thread_count + Pcode
+            All_data[count]['Tiled_Loop'] = 'Not Tiled'
+
+        Complexity_class , Complexity = Complexity_of_loop(loops)
+        All_data[count]['Complexity'] = Complexity
+        All_data[count]['Complexity_Class'] = Complexity_class
+
+        count += 1
+
+    # writing the data to the file
+    file = open('P_code.txt', 'w')
+    file.write(json.dumps(All_data, indent=4))
+    file.close()
+
+    return json.dumps(All_data, indent=4)
