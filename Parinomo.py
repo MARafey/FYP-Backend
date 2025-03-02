@@ -656,6 +656,50 @@ def indent_cpp_code(code: str, style: str = "LLVM") -> str:
         print("Error formatting code:", e)
         return code
 
+def identify_dependencies(loop_block, loop_index='i'):
+    """
+    Analyzes a loop block to determine if it is parallelizable.
+
+    The heuristic assumes that:
+      - Array accesses using the loop index (e.g. A[i]) are isolated to each iteration.
+      - Any assignment to a variable without such indexing (or with a different index)
+        may introduce a cross-iteration dependency.
+
+    Returns:
+        (parallelizable: bool, non_parallelizable_line: int or None)
+    If parallelizable is True, non_parallelizable_line is None.
+    If parallelizable is False, non_parallelizable_line indicates the first line where a dependency is detected.
+    """
+    lines = loop_block.split('\n')
+    written_vars = set()
+
+    for i, line in enumerate(lines):
+        line_num = i + 1
+        stripped = line.strip()
+        # Skip empty or comment lines.
+        if not stripped or stripped.startswith('//') or stripped.startswith('#'):
+            continue
+
+        # Look for an assignment operation.
+        match = re.search(r'(\w+)(\s*\[[^\]]+\])?\s*=', line)
+        if match:
+            var = match.group(1)
+            index_part = match.group(2)
+            if index_part:
+                # Normalize the index: remove spaces and the surrounding brackets.
+                index_clean = index_part.strip()[1:-1].strip()
+                # If the index is not exactly the loop index, we consider it a cross-iteration dependency.
+                if index_clean != loop_index:
+                    return False, line_num
+            else:
+                # No array index implies a global variable assignment that is likely loop-carried.
+                if var in written_vars:
+                    return False, line_num
+                written_vars.add(var)
+
+    # If no problematic assignments are found, assume the loop block may be parallelizable.
+    return True, None
+
 def Parinomo(SCode, core_type, ram_type, processors_count):
 
     # making a json file to store loops and their tilled version and parallelized version if avalible with complexity
@@ -683,12 +727,16 @@ def Parinomo(SCode, core_type, ram_type, processors_count):
                 All_data[count]['Parallelized_Loop'] = 'Not Parallelizable'
         else:
             ParallelBlock = indent_cpp_code(loops)
-            if 'break' in ParallelBlock or 'return' in ParallelBlock:
-                All_data[count]['Parallelized_Loop'] = indent_cpp_code(Soft_Break(ParallelBlock)) + '\n' + ParallelBlock
+
+            Paralleizable_Flag, reason = identify_dependencies(ParallelBlock)
+
+            if Paralleizable_Flag == True:
+                if 'break' in ParallelBlock or 'return' in ParallelBlock:
+                    All_data[count]['Parallelized_Loop'] = indent_cpp_code(Soft_Break(ParallelBlock)) + '\n' + ParallelBlock
+                else:
+                    All_data[count]['Parallelized_Loop'] = indent_cpp_code(parallelizing_loop(ParallelBlock)) + '\n' + ParallelBlock
             else:
-                All_data[count]['Parallelized_Loop'] = indent_cpp_code(parallelizing_loop(ParallelBlock)) + '\n' + ParallelBlock
-
-
+                All_data[count]['Parallelized_Loop'] = 'Not Parallelizable ' + reason
             All_data[count]['Tiled_Loop'] = 'Not Tiled'
 
         Complexity_class , Complexity = Complexity_of_loop(loops)
