@@ -1,165 +1,198 @@
 from Parinomo import Parinomo, indent_cpp_code, LoopBlocks
-
-
 Ram = 2
 core_type = 'i5'
 Processpr = 8
 
 # reading file to get code
-file = open('CodeFiles/code2.txt', 'r')
+file = open('CodeFiles/code.txt', 'r')
 Scode = file.read()
 file.close()
 
 P_code = Parinomo(Scode, core_type,Ram, Processpr)
+# import re
 
-'''
-import re
-from typing import Any
-
-
-def Complexity_of_loop(Block: str) -> int | tuple[int, Any]:
-    """
-    This function calculates the complexity of the given loop block, based on provided rules.
-    Rules:
-        This function will return the complexity of the loop block.
-        Things used:
-            1. The loop condition
-            2. The number of nested loops and their conditions
-            3. The number of variables used in the loop
-                a. single variable have complexity 1
-                b. multiple dimension variables have complexity 2
-            4. The number of operations in the loop
-                a. Binary operation have complexity 1 i.e (&, |, ^)
-                b. Arithmatic operations have complexity 2 i.e (+, -, *, /, %)
-                c. Unary operations have complexity 1.5 i.e (++, --)
-                d. Assignment operations have complexity 1 i.e (=)
-            5. The total number of lines within the loop excluding the loop condition line and brackets '{}' lines
-            6. The number of function calls within the loop block
-                a. Complexity of function depends upon the passed arguments and the return type of the function
-                b. In case of passing array the complexity will be 3
-                c. In case of passing single variable the complexity will be 1
-            7. Incase the loop condition has a hard-coded value, the complexity will be that value multiplied by 0.2
-    Parameters:
-        Block (str): The loop block as a string
-
-    Returns:
-        float: The total calculated complexity of the loop block
-    """
-    complexity = 0.0
-
-    # 1. Analyze the loop condition
-    loop_condition = re.search(r'for\s*\((.*?)\)', Block)
-
-    # Check if the loop condition has a hard-coded value
-    value = re.findall(r'(\d+)', Block)
-    # print(value)
-    if value:
-        # print(value)
-        for v in value:
-            if int(v) > 1000000:
-                complexity += float(v) * 0.2
-            else:
-                complexity -= float(v) * 0.42 # 42 is a joke because during random seed we use 42 and I never understood why
-            # print(complexity)
-
-    if loop_condition:
-        condition_content = loop_condition.group(1)
-        # Assume each variable in the condition contributes a base complexity of 1
-        complexity += condition_content.count(',') + 1  # Number of variables in loop condition
-
-    # 2. Count nested loops
-    nested_loops = re.findall(r'for\s*\([^)]*\)', Block)
-    complexity += len(nested_loops) * 2  # Each nested loop adds 2 to complexity
-
-    # 3. Analyze variables in the loop
-    variables = re.findall(r'([a-zA-Z_]\w*(?:\[[^\]]*\])*)', Block)
-    for var in variables:
-        if '[' in var:  # It's a multi-dimensional variable
-            complexity += 2
-        else:  # Single variable
-            complexity += 1
-
-    # 4. Count operations
-    binary_ops = re.findall(r'[\&\|\^]', Block)  # Binary operations
-    arithmetic_ops = re.findall(r'[+\-*/%]', Block)  # Arithmetic operations
-    unary_ops = re.findall(r'\+\+|--', Block)  # Unary operations
-    assignment_ops = re.findall(r'=', Block)  # Assignment operations
-
-    complexity += len(binary_ops) * 1  # Each binary operation adds 1
-    complexity += len(arithmetic_ops) * 2  # Each arithmetic operation adds 2
-    complexity += len(unary_ops) * 1.5  # Each unary operation adds 1.5
-    complexity += len(assignment_ops) * 1  # Each assignment operation adds 1
-
-    # 5. Total number of lines inside the loop (excluding brackets and loop header)
-    lines = Block.split('\n')
-    meaningful_lines = [line for line in lines if
-                        line.strip() and not line.strip().startswith('for') and not line.strip().startswith(
-                            '{') and not line.strip().startswith('}')]
-    complexity += len(meaningful_lines)
-
-    # 6. Function calls within the loop
-    function_calls = re.findall(r'\b\w+\s*\(([^)]*)\)', Block)
-    for call in function_calls:
-        # Check what is passed to the function
-        if '[' in call:  # Passing array
-            complexity += 3
-        else:  # Single variable
-            complexity += 1
-
-    # classifying the complexity into 1 to 5
-    # 5 being the most complex and 1 being the least complex
-
-    complexity = round(complexity)
-
-    if complexity > 50:
-        return 5 , complexity
-    elif complexity > 40:
-        return 4 , complexity
-    elif complexity > 30:
-        return 3 , complexity
-    elif complexity > 20:
-        return 2 , complexity
-    else:
-        return 1 , complexity
+# def extract_loop_variables(code):
+#     """
+#     Extracts variables from C/C++ loop blocks, categorizing them as single or array variables.
+    
+#     Args:
+#         code (str): A string containing C/C++ loop code
+        
+#     Returns:
+#         tuple: (single_variables, array_variables) lists containing variable names
+#     """
+#     # Remove C-style comments
+#     code = re.sub(r'/\*.*?\*/', '', code, flags=re.DOTALL)
+#     code = re.sub(r'//.*?$', '', code, flags=re.MULTILINE)
+    
+#     # Find all variable declarations
+#     declarations = re.findall(r'\b(?:int|float|double|char|bool|long|short|unsigned|void|auto)\s+([a-zA-Z_][a-zA-Z0-9_]*)', code)
+    
+#     # Find all variables used in the code
+#     # This looks for identifiers that aren't part of a keyword or function call
+#     all_identifiers = re.findall(r'\b([a-zA-Z_][a-zA-Z0-9_]*)\b(?!\s*\()', code)
+    
+#     # Remove C/C++ keywords
+#     keywords = ['for', 'if', 'else', 'while', 'do', 'switch', 'case', 'break', 'continue',
+#                 'return', 'int', 'float', 'double', 'char', 'bool', 'void', 'long', 'short',
+#                 'unsigned', 'signed', 'const', 'static', 'struct', 'enum', 'class', 'auto']
+#     all_identifiers = [ident for ident in all_identifiers if ident not in keywords]
+    
+#     # Find array access patterns: identifiers followed by square brackets
+#     array_pattern = re.compile(r'([a-zA-Z_][a-zA-Z0-9_]*)\s*\[')
+#     array_variables = list(set(array_pattern.findall(code)))
+    
+#     # All other variables are single variables
+#     single_variables = list(set(all_identifiers) - set(array_variables))
+    
+#     # Add declared variables that might not be used
+#     single_variables = list(set(single_variables + declarations))
+    
+#     # Sort lists for consistent output
+#     single_variables.sort()
+#     array_variables.sort()
+    
+#     return single_variables, array_variables
 
 
-example_loop = """
-for (int i = 0; i < r1; ++i) {
-        for (int j = 0; j < c2; ++j) {
-            for (int k = 0; k < c1; ++k) {
-                mult[i][j] += a[i][k] * b[k][j];
-            }
-        }
-    }
-"""
-print("Complexity = ",Complexity_of_loop(example_loop))
+# def analyze_openmp_variables(code, single_variables, array_variables):
+#     """
+#     Analyzes loop variables to determine their OpenMP clause classification
+#     (shared, private, firstprivate, lastprivate)
+    
+#     Args:
+#         code (str): C/C++ loop code
+#         single_variables (list): List of single variables
+#         array_variables (list): List of array variables
+        
+#     Returns:
+#         dict: Dictionary containing lists of variables for each OpenMP clause
+#     """
+#     # Remove C-style comments
+#     code = re.sub(r'/\*.*?\*/', '', code, flags=re.DOTALL)
+#     code = re.sub(r'//.*?$', '', code, flags=re.MULTILINE)
+    
+#     # Extract code inside the loop body (between curly braces)
+#     loop_body_match = re.search(r'for\s*\([^)]*\)\s*{(.*?)}', code, re.DOTALL)
+#     if not loop_body_match:
+#         return {"error": "No valid loop body found"}
+    
+#     loop_body = loop_body_match.group(1)
+    
+#     # Extract loop control variable
+#     loop_control_match = re.search(r'for\s*\(\s*(?:int\s+)?([a-zA-Z_][a-zA-Z0-9_]*)', code)
+#     if not loop_control_match:
+#         return {"error": "Could not identify loop control variable"}
+    
+#     loop_var = loop_control_match.group(1)
+    
+#     # Initialize result categories
+#     result = {
+#         "shared": [],
+#         "private": [loop_var],  # Loop control variable is always private
+#         "firstprivate": [],
+#         "lastprivate": [],
+#         "reduction": []
+#     }
+    
+#     # Find all variables declared inside the loop
+#     declared_inside = re.findall(r'\b(?:int|float|double|char|bool|long|short|unsigned|void|auto)\s+([a-zA-Z_][a-zA-Z0-9_]*)', loop_body)
+    
+#     # All variables declared inside the loop are private
+#     result["private"].extend(declared_inside)
+    
+#     # Check each single variable
+#     for var in single_variables:
+#         if var in declared_inside or var == loop_var:
+#             continue  # Already handled
+            
+#         # Check if read before write (firstprivate candidate)
+#         lines = loop_body.split('\n')
+#         read_first = False
+#         written = False
+        
+#         for line in lines:
+#             # Look for read operations (variable appears on right side of assignment or in expressions)
+#             read_match = re.search(rf'[=|+|\-|*|/|%|&|\||^|>|<|!|?|:|\s]\s*{var}\b', line) or \
+#                          re.search(rf'[+|\-|*|/|%|&|\||^|>|<|!|?|:|\(]\s*{var}\b', line) or \
+#                          re.search(rf'\b{var}[+|\-|+]{2}', line)  # increment/decrement
+            
+#             # Look for write operations (variable appears on left side of assignment)
+#             write_match = re.search(rf'\b{var}\s*(?:[+|\-|*|/|%|&|\||^])?=', line) or \
+#                           re.search(rf'\b{var}[+|\-]{2}', line)  # increment/decrement
+            
+#             if read_match and not written:
+#                 read_first = True
+#             if write_match:
+#                 written = True
+                
+#         # Check if written in the last iteration (lastprivate candidate)
+#         last_iter_usage = re.search(rf'\b{var}\s*(?:[+|\-|*|/|%|&|\||^])?=', lines[-1]) or \
+#                           re.search(rf'\b{var}[+|\-]{2}', lines[-1])
+                
+#         # Check for reduction patterns
+#         reduction_match = re.search(rf'\b{var}\s*(?:[+|\-|*|/|%|&|\|])?=\s*{var}\b', loop_body)
+        
+#         # Assign to appropriate category
+#         if reduction_match:
+#             result["reduction"].append(var)
+#         elif read_first and written:
+#             result["firstprivate"].append(var)
+#         elif last_iter_usage:
+#             result["lastprivate"].append(var)
+#         elif written:
+#             result["private"].append(var)
+#         else:
+#             result["shared"].append(var)
+    
+#     # Handle array variables - generally shared unless clear pattern indicates otherwise
+#     for var in array_variables:
+#         # Check if the array is only read from
+#         write_to_array = re.search(rf'\b{var}\s*\[[^\]]*\]\s*(?:[+|\-|*|/|%|&|\||^])?=', loop_body) or \
+#                          re.search(rf'\b{var}\s*\[[^\]]*\][+|\-]{2}', loop_body)
+                         
+#         if not write_to_array:
+#             result["shared"].append(var)
+#         else:
+#             # Check if array modifications depend on loop variable
+#             loop_var_dependent = re.search(rf'\b{var}\s*\[.*\b{loop_var}\b.*\]', loop_body)
+#             if loop_var_dependent:
+#                 # If each iteration writes to different indices (loop var is used in index)
+#                 result["shared"].append(var)
+#             else:
+#                 # If we're potentially writing to the same indices
+#                 result["shared"].append(var)  # Still shared but with potential race conditions
+                
+#     # Remove duplicates and sort
+#     for category in result:
+#         result[category] = sorted(list(set(result[category])))
+        
+#     return result
 
-example_loop = """
-for (int i =0; i < 10; i++) {
-sum += arr[i];
-}
-"""
-print("Complexity = ",Complexity_of_loop(example_loop))
+# # Example usage
+# code = '''
+# for (int i = 0; i < 10; i++){
+#     a += 1;
+#     b++;
+#     a += a+b;
+#     int d;
+#     arr[i]++;
+#     bsc[i][j] += a;
+# }
+# '''
+# single_variables, array_variables = extract_loop_variables(code)
+# result = analyze_openmp_variables(code, single_variables, array_variables)
+# print("OpenMP pragma suggestion:")
+# print("#pragma omp parallel for", end=" ")
 
-example_loop = """
-for (int i =0; i < 1000000; i++) {
-sum += arr[i];
-}
-"""
-print("Complexity = ",Complexity_of_loop(example_loop))
-
-
-example_loop = """
-for (int i =0; i < N; i++) {
-sum += arr[i];
-}
-"""
-print("Complexity = ",Complexity_of_loop(example_loop))
-
-
-example_loop = """
-for (int i =0; i < 10; i++) {
-}
-"""
-print("Complexity = ",Complexity_of_loop(example_loop))
-'''
+# clauses = []
+# for category, vars_list in result.items():
+#     if vars_list and category != "error":
+#         if category == "reduction":
+#             reducible_vars = [f"{var}" for var in vars_list]
+#             if reducible_vars:
+#                 clauses.append(f"reduction(+:{', '.join(reducible_vars)})")
+#         else:
+#             clauses.append(f"{category}({', '.join(vars_list)})")
+            
+# print(" ".join(clauses))
