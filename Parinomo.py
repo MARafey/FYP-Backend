@@ -234,7 +234,7 @@ def determine_array_access_type(loop_string):
     else:
         return "Single variables"
 
-def generate_tiled_loop(loop_string, tile_size):
+def generate_tiled_loop(loop_string, tile_size='tile_size'):
     """
     Converts a nested loop string into a tiled version.
 
@@ -245,73 +245,77 @@ def generate_tiled_loop(loop_string, tile_size):
     Returns:
         str: The loop tiled version.
     """
-    # Match the loop pattern using regex
+    
+    # Match the loop pattern using a more flexible regex that handles various loop formats
     loop_pattern = re.compile(
-        r"\s*for\s*\((int\s+)?(?P<var>[a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(?P<start>[a-zA-Z_][a-zA-Z0-9_]*|\d+);\s*"
-        r"(?P=var)\s*<\s*(?P<end>[a-zA-Z_][a-zA-Z0-9_]*|\d+);\s*(?P=var)\+\+\)"
+        r"\s*for\s*\(\s*(int\s+)?(?P<var>[a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(?P<start>[a-zA-Z0-9_\[\]]+);\s*"
+        r"(?P=var)\s*(?P<cmp><=|<|>=|>)\s*(?P<end>[a-zA-Z0-9_\[\]]+);\s*(?P=var)(?P<incr>\+\+|\-\-|\+=\s*\d+|\-=\s*\d+)\s*\)"
     )
 
-
     # Find all loops in the input string
-    loops = loop_pattern.findall(loop_string)
+    loop_matches = list(loop_pattern.finditer(loop_string))
     
-    if not loops:
+    if not loop_matches:
         return "Invalid or no loop found in the input string."
 
     # Generate tiled version
-    tiled_loops = []
-    current_level = 0
-    pos = 0
-
-
-    while pos < len(loop_string):
-        match = loop_pattern.search(loop_string, pos)
-        if not match:
-            tiled_loops.append(loop_string[pos:])
-            break
-
-        # Add content before the loop
-        tiled_loops.append(loop_string[pos:match.start()])
-
-        var, start, end = match.group("var"), match.group("start"), match.group("end")
-
-        # Add the outer tiled loop
-        tiled_loops.append(
-            f"for (int {var}_tile = {start}; {var}_tile < {end}; {var}_tile += tile_size) {{\n"
+    result = []
+    current_pos = 0
+    open_braces = 0
+    
+    for match in loop_matches:
+        # Add any content before this loop
+        result.append(loop_string[current_pos:match.start()])
+        
+        # Extract loop components
+        var = match.group("var")
+        start = match.group("start")
+        end = match.group("end")
+        comparator = match.group("cmp")
+        increment = match.group("incr")
+        
+        # Adjust the min/max function based on the comparison operator
+        min_max_func = "std::min" if comparator in ["<", "<="] else "std::max"
+        
+        # Add the outer tiled loop (iteration space divided into tiles)
+        result.append(
+            f"for (int {var}_tile = {start}; {var}_tile {comparator} {end}; "
         )
-        # Add the inner loop
-        tiled_loops.append(
-            f"    for (int {var} = {var}_tile; {var} < std::min({var}_tile + tile_size, {end}); {var}++) {{\n"
-        )
-
-        # Update the position
-        pos = match.end()
-        current_level += 1
-
+        
+        # Handle different increment types
+        if increment == "++":
+            result.append(f"{var}_tile += {tile_size}) {{\n")
+        elif increment == "--":
+            result.append(f"{var}_tile -= {tile_size}) {{\n")
+        elif "+=" in increment:
+            inc_val = increment.split("+=")[1].strip()
+            result.append(f"{var}_tile += ({tile_size} * {inc_val})) {{\n")
+        elif "-=" in increment:
+            inc_val = increment.split("-=")[1].strip()
+            result.append(f"{var}_tile -= ({tile_size} * {inc_val})) {{\n")
+        
+        # Add the inner loop (within a single tile)
+        # For loop going forward
+        if "++" in increment or "+=" in increment:
+            result.append(
+                f"    for (int {var} = {var}_tile; {var} {comparator} {min_max_func}({var}_tile + {tile_size}, {end}); {increment}) {{\n"
+            )
+        # For loop going backward
+        else:
+            result.append(
+                f"    for (int {var} = {var}_tile; {var} {comparator} {min_max_func}({var}_tile - {tile_size}, {end}); {increment}) {{\n"
+            )
+        
+        open_braces += 1
+        current_pos = match.end()
+    
+    # Add remaining content after the last matched loop
+    result.append(loop_string[current_pos:])
+    
     # Close all opened loops
-    tiled_loops.extend("    }\n" * current_level)
-
-    return ''.join(tiled_loops)
-
-def Operation_split(string):
-    '''
-    This function will split the string on the basis of operations
-    Args:
-        string: String to be splitted
-
-    Returns:
-        List of splitted string
-    '''
-    # splitting on bases of operations
-    possible_operations = ['<', '>', '<=', '>=', '==', '!=', '&&', '||']
-
-    condition_split = None
-    for operation in possible_operations:
-        if operation in string:
-            condition_split = string.split(operation)
-            break
-
-    return condition_split
+    result.extend(["    }\n}" * open_braces])
+    
+    return ''.join(result)
 
 # handling Break conditions
 def Soft_Break(function_str):
@@ -494,6 +498,7 @@ def check_input_output(Loop_Block):
 
     return False
 
+'''
 # This function will return a list of all the loop blocks present in the given C or C++ file.
 def LoopBlocks(Code_String):
     Loop_Blocks = []
@@ -561,6 +566,84 @@ def LoopBlocks(Code_String):
         else:
             i += 1  # Move to the next character if not a 'for' loop
 
+    return Loop_Blocks
+'''
+def LoopBlocks(Code_String):
+    Loop_Blocks = []
+    i = 0
+
+    while i < len(Code_String):
+        # Look for "for" keyword followed by whitespace or opening parenthesis
+        if (i + 3 < len(Code_String) and Code_String[i:i+3] == 'for' and 
+                (i+3 >= len(Code_String) or Code_String[i+3].isspace() or Code_String[i+3] == '(')):
+            start_index = i
+            Block = "for"
+            i += 3  # Move past "for"
+            
+            # Skip whitespace
+            while i < len(Code_String) and Code_String[i].isspace():
+                Block += Code_String[i]
+                i += 1
+            
+            # Capture the loop condition within parentheses
+            if i < len(Code_String) and Code_String[i] == '(':
+                paren_count = 1
+                Block += Code_String[i]
+                i += 1
+                
+                # Continue until matching parenthesis is found
+                while i < len(Code_String) and paren_count > 0:
+                    if Code_String[i] == '(':
+                        paren_count += 1
+                    elif Code_String[i] == ')':
+                        paren_count -= 1
+                    Block += Code_String[i]
+                    i += 1
+                
+                # Check if we found a valid for loop (should have 2 semicolons within parentheses)
+                semicolons = Block.count(';')
+                if semicolons < 2:
+                    i = start_index + 1  # Not a valid for loop, continue searching
+                    continue
+                
+                # Handle loop body
+                # Skip whitespace
+                while i < len(Code_String) and Code_String[i].isspace():
+                    Block += Code_String[i]
+                    i += 1
+                
+                if i < len(Code_String):
+                    if Code_String[i] == '{':
+                        # Block with braces
+                        brace_count = 1
+                        Block += Code_String[i]
+                        i += 1
+                        
+                        # Continue until all opening braces are matched
+                        while i < len(Code_String) and brace_count > 0:
+                            if Code_String[i] == '{':
+                                brace_count += 1
+                            elif Code_String[i] == '}':
+                                brace_count -= 1
+                            Block += Code_String[i]
+                            i += 1
+                    else:
+                        # Single line statement (no braces)
+                        while i < len(Code_String) and Code_String[i] != ';':
+                            Block += Code_String[i]
+                            i += 1
+                        if i < len(Code_String) and Code_String[i] == ';':
+                            Block += Code_String[i]
+                            i += 1
+                
+                # Add the block to our results
+                Loop_Blocks.append(Block)
+            else:
+                # If we don't find an opening parenthesis after "for", move on
+                i = start_index + 1
+        else:
+            i += 1
+            
     return Loop_Blocks
 
 # This function will check what is the dependency of the given loop block on the variables
@@ -631,12 +714,6 @@ def getCountofForLoops(code):
             count += 1
         i += 1
     return count
-
-# This function finds start and end index of substring in the string
-def find_substring(string, substring):
-    start = string.index(substring)
-    end = start + len(substring)
-    return start, end
 
 def Complexity_of_loop(Block: str) -> int | tuple[int, Any]:
     """
@@ -743,47 +820,6 @@ def Complexity_of_loop(Block: str) -> int | tuple[int, Any]:
     else:
         return 1 , complexity
 
-# This function will replace the loop block with the parallelized block in the code string.
-def Replacing_Loop_Block(Loop_Block, Parallelized_Block, Code_String):
-    '''
-    This function will replace the loop block with the parallelized block in the code string.
-        :param Loop_Block: List of original loop blocks in the code.
-        :param Parallelized_Block: List of corresponding parallelized loop blocks.
-        :param Code_String: Original code as a string.
-        :return: Code string with parallelized blocks.
-    '''
-
-    # Code_String = '\n'+Code_String.strip().replace('  ', '').replace('\n\n', '\n')
-    for i in range(len(Loop_Block)):
-        str = Loop_Block[i]
-        str = str.strip().replace('{', ' {')
-        str = str.strip().replace('  ', ' ')
-        str = indent_cpp_code(str)
-        # print('*'*20 + '\n'+str)
-        # print('*'*20 + '\n'+ Parallelized_Block[i])
-        # print('*'*20 + '\n'+Code_String)
-        Code_String = Code_String.replace(str, Parallelized_Block[i])
-    # print(Code_String)
-    return Code_String
-
-# This function will open the C or C++ file and get content from that file
-def open_file(file_path):
-    try:
-        with open(file_path, 'r') as file:
-            content = file.read()
-            Loop_Blocks = LoopBlocks(content)
-            parall_Loop_Block = []
-            for Loop_Block in Loop_Blocks:
-                parall_Loop_Block.append(parallelizing_loop(Loop_Block) + '\n' + Loop_Block)
-
-            Parellel_code = Replacing_Loop_Block(Loop_Blocks, parall_Loop_Block, content)
-
-            writing_code_to_file('parallelized_code.cpp', Parellel_code)
-    except FileNotFoundError:
-        print("File not found. Please check the file path.")
-    except IOError:
-        print("An error occurred while reading the file.")
-
 # This function will check the variable that are declared in the loop block and the one that come from outside the loop block.
 def Variable_in_Loop(Loop_Block):
     Outside_Variable = []
@@ -814,7 +850,7 @@ def indent_cpp_code(code: str, style: str = "LLVM") -> str:
         print("Error formatting code:", e)
         return code
 
-def identify_dependencies(loop_block, loop_index='i'):
+def identify_dependencies(loop_block, loop_index=['i','j','k']):
     """
     Analyzes a loop block to determine if it is parallelizable.
 
@@ -822,14 +858,24 @@ def identify_dependencies(loop_block, loop_index='i'):
       - Array accesses using the loop index (e.g. A[i]) are isolated to each iteration.
       - Any assignment to a variable without such indexing (or with a different index)
         may introduce a cross-iteration dependency.
+      - Any access to a variable with an index like [i-1] creates a cross-iteration dependency.
+      - Any variable access with a loop variable +/- a constant creates a dependency.
 
     Returns:
         (parallelizable: bool, non_parallelizable_line: int or None)
     If parallelizable is True, non_parallelizable_line is None.
     If parallelizable is False, non_parallelizable_line indicates the first line where a dependency is detected.
     """
+    import re
     lines = loop_block.split('\n')
     written_vars = set()
+    
+    # Helper function to check if a string contains a loop index with offset
+    def has_offset_index(text):
+        for index in loop_index:
+            if re.search(rf'{index}\s*[-+]\s*\d+', text) or re.search(rf'\w+\s*[-+]\s*\d+', text):
+                return True
+        return False
 
     for i, line in enumerate(lines):
         line_num = i + 1
@@ -838,16 +884,30 @@ def identify_dependencies(loop_block, loop_index='i'):
         if not stripped or stripped.startswith('//') or stripped.startswith('#'):
             continue
 
+        # First, check for any array access with index offset before assignment
+        # This handles cases like dp[i-1][w] on right side of assignment
+        for var in re.findall(r'(\w+)\s*\[([^\]]+)\]', line):
+            var_name, index_expr = var
+            if has_offset_index(index_expr):
+                return False, line_num
+
         # Look for an assignment operation.
         match = re.search(r'(\w+)(\s*\[[^\]]+\])?\s*=', line)
         if match:
             var = match.group(1)
             index_part = match.group(2)
+            
+            # Check if the line uses the same variable with a modified index
             if index_part:
                 # Normalize the index: remove spaces and the surrounding brackets.
                 index_clean = index_part.strip()[1:-1].strip()
-                # If the index is not exactly the loop index, we consider it a cross-iteration dependency.
-                if index_clean != loop_index:
+                
+                # Check if the index contains loop index with offset (i-1) or any variable with offset
+                if has_offset_index(index_clean):
+                    return False, line_num
+                
+                # Check if the index is completely unrelated to the loop indices
+                if not any(index in index_clean for index in loop_index):
                     return False, line_num
             else:
                 # No array index implies a global variable assignment that is likely loop-carried.
@@ -855,8 +915,29 @@ def identify_dependencies(loop_block, loop_index='i'):
                     return False, line_num
                 written_vars.add(var)
 
+        # Check for any array access with the same name as the assigned variable
+        # This handles cases where the same array is accessed with different indices
+        if match:
+            var = match.group(1)
+            # Look for any other access to the same variable in the line
+            other_accesses = re.findall(rf'{var}\s*\[([^\]]+)\]', line)
+            for access in other_accesses:
+                if has_offset_index(access):
+                    return False, line_num
+
     # If no problematic assignments are found, assume the loop block may be parallelizable.
     return True, None
+
+def GetControlers(Loop_Block):
+    '''
+        Return list of variables that are present within '[ ]' in the loop block.
+    '''
+    expression = re.findall(r'\[([^\]]+)\]', Loop_Block)
+
+    # making unique list of variables
+    expression = list(set(expression))
+
+    return expression
 
 def Parinomo(SCode, core_type, ram_type, processors_count):
 
@@ -867,6 +948,9 @@ def Parinomo(SCode, core_type, ram_type, processors_count):
     SCode = indent_cpp_code(SCode)
 
     Loop_Blocks = LoopBlocks(SCode)
+
+
+    # print(Loop_Blocks)
 
     count = 1
 
@@ -879,27 +963,35 @@ def Parinomo(SCode, core_type, ram_type, processors_count):
             array_type = determine_array_access_type(loops)
             if array_type != "Single variables":
                 tile_size = calculate_tile_size(ram_type, array_type)
-                tiled_loop = generate_tiled_loop(loops, tile_size)
+                tiled_loop = generate_tiled_loop(loops)
                 tiled_loop = indent_cpp_code(tiled_loop)
                 All_data[count]['Tiled_Loop'] = tiled_loop
                 All_data[count]['Parallelized_Loop'] = 'Not Parallelizable'
         else:
             ParallelBlock = indent_cpp_code(loops)
 
-            Paralleizable_Flag, reason = identify_dependencies(ParallelBlock)
+            expression = GetControlers(ParallelBlock)
+            # print(expression)
+            Paralleizable_Flag, reason = identify_dependencies(ParallelBlock,expression)
+
+            # print(reason)
 
             if Paralleizable_Flag == True:
                 if 'break' in ParallelBlock or 'return' in ParallelBlock:
                     All_data[count]['Parallelized_Loop'] = indent_cpp_code(Soft_Break(ParallelBlock)) + '\n' + ParallelBlock
                 else:
-                    # All_data[count]['Parallelized_Loop'] = indent_cpp_code(parallelizing_loop(ParallelBlock)) + '\n' + ParallelBlock
                     single_variable, array_variable = extract_loop_variables(ParallelBlock)
                     result = analyze_openmp_variables(ParallelBlock, single_variable, array_variable)
                     clauses = []
                     for category, vars_list in result.items():
+                        
+                        # remove any primiteve data type from the list or keywords including true and false keywords
+                        vars_list = [f"{var}" for var in vars_list if var not in ['true', 'false']]
+
                         if vars_list and category != "error":
                             if category == "reduction":
                                 reducible_vars = [f"{var}" for var in vars_list]
+                                # remove any primiteve data type from the list or keywords
                                 if reducible_vars:
                                     clauses.append(f"reduction(+:{', '.join(reducible_vars)})")
                             else:
@@ -918,9 +1010,11 @@ def Parinomo(SCode, core_type, ram_type, processors_count):
                         All_data[count]['Parallelized_Loop'] = indent_cpp_code(indent_cpp_code(f"#pragma omp parallel for {' '.join(clauses)}") + '\n' + ParallelBlock)
                     All_data[count]['Tiled_Loop'] = 'Not Tiled'
             else:
-                All_data[count]['Parallelized_Loop'] = 'Not Parallelizable ' + reason
+                All_data[count]['Parallelized_Loop'] = 'Not Parallelizable Due to line number ' + str(reason)
+                ParallelBlock = indent_cpp_code(ParallelBlock)
+                array_type = determine_array_access_type(ParallelBlock)
                 tile_size = calculate_tile_size(ram_type, array_type)
-                tiled_loop = generate_tiled_loop(loops, tile_size)
+                tiled_loop = generate_tiled_loop(ParallelBlock)
                 tiled_loop = indent_cpp_code(tiled_loop)
                 All_data[count]['Tiled_Loop'] = tiled_loop
 
