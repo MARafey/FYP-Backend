@@ -1,30 +1,23 @@
 {
     "1": {
-        "Loop": "for (int i = 0; i < N; i++){\n    for (int j = 0; j < N; j++) {\n      C[i][j] = A[i][j] + B[i][j];\n    }\n  }",
-        "Parallelized_Loop": "#pragma omp parallel for shared(A, B, C, N) private(i, j)\nfor (int i = 0; i < N; i++) {\n  for (int j = 0; j < N; j++) {\n    C[i][j] = A[i][j] + B[i][j];\n  }\n}",
+        "Loop": "for (int i = 0; i < graph.size(); i++) {\n    if (graph[x][i] == true) {\n      if (graph[i][start] == true) {\n        count++;\n      }\n    }\n  }",
+        "Parallelized_Loop": "#pragma omp parallel for\nfor (int i = 0; i < graph.size(); i++) {\n  if (graph[x][i] == true) {\n    if (graph[i][start] == true) {\n      count++;\n    }\n  }\n}",
         "Tiled_Loop": "Not Tiled",
-        "Complexity": 42,
+        "Complexity": 45,
         "Complexity_Class": 4
     },
     "2": {
-        "Loop": "for (int i = 0; i < N; i++){\n    for (int j = 0; j < N; j++) {\n      cin >> A[i][j];\n    }\n  }",
-        "Tiled_Loop": "for (int i_tile = 0; i_tile < N; i_tile += tile_size) {\n  for (int i = i_tile; i < std::min(i_tile + tile_size, N); i++) {\n    {\n      for (int j_tile = 0; j_tile < N; j_tile += tile_size) {\n        for (int j = j_tile; j < std::min(j_tile + tile_size, N); j++) {\n          {\n            cin >> A[i][j];\n          }\n        }\n      }\n    }\n",
-        "Parallelized_Loop": "Not Parallelizable",
-        "Complexity": 36,
-        "Complexity_Class": 3
+        "Loop": "for (int i = 0; i < graph.size(); i++) {\n    int start = i;\n    for (int j = 0; j < graph.size(); j++) {\n      if (graph[i][j] == true && i != j) {\n        count += travelnext(graph, j, start);\n      }\n    }\n  }",
+        "Parallelized_Loop": "#pragma omp parallel for reduction(+ : count)\nfor (int i = 0; i < graph.size(); i++) {\n  int start = i;\n  for (int j = 0; j < graph.size(); j++) {\n    if (graph[i][j] == true && i != j) {\n      count += travelnext(graph, j, start);\n    }\n  }\n}",
+        "Tiled_Loop": "Not Tiled",
+        "Complexity": 64,
+        "Complexity_Class": 5
     },
     "3": {
-        "Loop": "for (int i = 0; i < N; i++){\n    for (int j = 0; j < N; j++) {\n      cin >> B[i][j];\n    }\n  }",
-        "Tiled_Loop": "for (int i_tile = 0; i_tile < N; i_tile += tile_size) {\n  for (int i = i_tile; i < std::min(i_tile + tile_size, N); i++) {\n    {\n      for (int j_tile = 0; j_tile < N; j_tile += tile_size) {\n        for (int j = j_tile; j < std::min(j_tile + tile_size, N); j++) {\n          {\n            cin >> B[i][j];\n          }\n        }\n      }\n    }\n",
-        "Parallelized_Loop": "Not Parallelizable",
-        "Complexity": 36,
-        "Complexity_Class": 3
-    },
-    "4": {
-        "Loop": "for (int i = 0; i < N; i++){\n    for (int j = 0; j < N; j++) {\n      cout << C[i][j] << \" \";\n    }\n    cout << endl;\n  }",
-        "Tiled_Loop": "for (int i_tile = 0; i_tile < N; i_tile += tile_size) {\n  for (int i = i_tile; i < std::min(i_tile + tile_size, N); i++) {\n    {\n      for (int j_tile = 0; j_tile < N; j_tile += tile_size) {\n        for (int j = j_tile; j < std::min(j_tile + tile_size, N); j++) {\n          {\n            cout << C[i][j] << \" \";\n          }\n          cout << endl;\n        }\n      }\n    }\n",
-        "Parallelized_Loop": "Not Parallelizable",
-        "Complexity": 39,
+        "Loop": "for (int i = 0; i < N; i++) {\n    for (int j = 0; j < N; j++) {\n      graph[i][j] = false;\n    }\n  }",
+        "Parallelized_Loop": "#pragma omp parallel for shared(N, graph)\nfor (int i = 0; i < N; i++) {\n  for (int j = 0; j < N; j++) {\n    graph[i][j] = false;\n  }\n}",
+        "Tiled_Loop": "Not Tiled",
+        "Complexity": 37,
         "Complexity_Class": 3
     }
 }
