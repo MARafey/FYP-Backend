@@ -1,14 +1,19 @@
-# Use an official Python runtime as a parent image
-FROM python:3.10-slim
+# Use an official Ubuntu as a parent image
+FROM ubuntu:22.04
 
 # Set the working directory in the container
 WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get upgrade -y && \
+    apt-get install -y python3 python3-pip valgrind build-essential && \
+    rm -rf /var/lib/apt/lists/*
 
 # Copy the requirements file to the container
 COPY requirements.txt .
 
 # Install the Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip3 install --no-cache-dir -r requirements.txt
 
 # Copy the rest of the application code to the container
 COPY . .

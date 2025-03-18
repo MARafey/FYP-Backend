@@ -942,7 +942,7 @@ def Parinomo(SCode, core_type, ram_type, processors_count):
         if check_input_output(loops):
             array_type = determine_array_access_type(loops)
             if array_type != "Single variables":
-                tile_size = calculate_tile_size(ram_type, array_type)
+                # tile_size = calculate_tile_size(ram_type, array_type)
                 tiled_loop = generate_tiled_loop(loops)
                 tiled_loop = indent_cpp_code(tiled_loop)
                 All_data[count]['Tiled_Loop'] = tiled_loop
@@ -998,7 +998,7 @@ def Parinomo(SCode, core_type, ram_type, processors_count):
                 All_data[count]['Parallelized_Loop'] = 'Not Parallelizable Due to line number ' + str(reason)
                 ParallelBlock = indent_cpp_code(ParallelBlock)
                 array_type = determine_array_access_type(ParallelBlock)
-                tile_size = calculate_tile_size(ram_type, array_type)
+                # tile_size = calculate_tile_size(ram_type, array_type)
                 tiled_loop = generate_tiled_loop(ParallelBlock)
                 tiled_loop = indent_cpp_code(tiled_loop)
                 All_data[count]['Tiled_Loop'] = tiled_loop
