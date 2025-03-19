@@ -4,6 +4,7 @@ import firebase_admin
 from firebase_admin import firestore
 from werkzeug.security import generate_password_hash, check_password_hash
 from firebase_config import * 
+from Analysis import Calling_for_analysis
 
 
 from Parinomo import Parinomo
@@ -85,6 +86,19 @@ def login():
 
     return jsonify({'success': False, 'message': 'Invalid email or password!'}), 401
 
+
+@app.route('/Analysis',methods=['POST'])
+def Analitics():
+    data = request.get_json()
+    P_Code = data.get('P_Code')
+    S_Code = data.get('S_Code')
+    input_dir = data.get('input_dir')
+
+    P_Code = '#include<omp.h>\n' +'#Define tile_size=16\n'+ P_Code
+    P_Analysis = Calling_for_analysis(P_Code, 1, input_dir)
+    S_Analysis = Calling_for_analysis(S_Code, 0, input_dir)
+
+    return jsonify({'P_Analysis': P_Analysis, 'S_Analysis': S_Analysis}), 200
 
 if __name__ == '__main__':
     app.run(debug=True)
