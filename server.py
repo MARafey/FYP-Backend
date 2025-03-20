@@ -5,7 +5,7 @@ from firebase_admin import firestore
 from werkzeug.security import generate_password_hash, check_password_hash
 from firebase_config import * 
 from Analysis import Calling_for_analysis
-
+import pandas as pd  # Ensure you have pandas imported
 
 from Parinomo import Parinomo
 
@@ -87,27 +87,31 @@ def login():
     return jsonify({'success': False, 'message': 'Invalid email or password!'}), 401
 
 
-@app.route('/Analysis', methods=['POST'])
+@app.route('/Analysis',methods=['POST'])
 def Analysis():
     data = request.get_json()
-    
-    # print(f"data= {data}")
-    
-    # printing the data
-    # for key in data:
-    #     print(key, ":", data[key], "\n")
-    # print(data["P_Code"]) 
     data = data.get('body')
-    # print(f"data= {data}")   
     P_Code = data.get('P_Code')
     S_Code = data.get('S_Code')
-    
-    if P_Code is None or S_Code is None:
-        return jsonify({'error': 'P_Code and S_Code are required!'}), 400
 
-    P_Code = '#include<omp.h>\n' + '#define tile_size=16\n' + P_Code
+    P_Code = '#include<omp.h>\n' +'const int tile_size=16;\n'+ P_Code
+    print("Calling P Code ")
     P_Analysis = Calling_for_analysis(P_Code, 1)
+    print("Calling Serial code")
     S_Analysis = Calling_for_analysis(S_Code, 0)
+
+    import os
+    import glob
+    # remove all cpp files
+    files = glob.glob("*.cpp")
+    for file in files:
+        os.remove(file)
+
+    # Convert DataFrame to JSON-serializable format
+    if isinstance(P_Analysis, pd.DataFrame):
+        P_Analysis, FileName = P_Analysis.to_dict(orient='records')
+    if isinstance(S_Analysis, pd.DataFrame):
+        S_Analysis, _ = S_Analysis.to_dict(orient='records')
 
     return jsonify({'P_Analysis': P_Analysis, 'S_Analysis': S_Analysis}), 200
 

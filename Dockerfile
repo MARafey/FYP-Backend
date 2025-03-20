@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && apt-get upgrade -y && \
-    apt-get install -y clang-format && \
+    apt install -y clang-format && \
     apt-get install -y python3 python3-pip valgrind build-essential && \
     rm -rf /var/lib/apt/lists/*
 
