@@ -101,6 +101,6 @@ def Calling_for_analysis(Code,Type,Parallel):
         file.write(Code)
 
     # getting the insights
-    df = get_Insights(Parallel, "Code.cpp", "Inputs/"+Type)
+    df = get_Insights(Parallel, "Code.cpp", "Inputs/1 D Arrays")
 
     return df
