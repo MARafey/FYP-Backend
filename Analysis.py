@@ -9,7 +9,7 @@ from Parinomo import indent_cpp_code, LoopBlocks
 
 def get_Insights(parallel, cpp_file, input_dir):
     executable = "./output_file"
-    output_csv = "Results/Results" + parallel + ".csv"
+    output_csv = "Results/Results" + str(parallel) + ".csv"
 
     # Compile C++ Code
     if parallel == False:
@@ -37,7 +37,7 @@ def get_Insights(parallel, cpp_file, input_dir):
     for file in sorted(os.listdir(input_dir)):
         if file.endswith(".txt"):
             input_path = os.path.join(input_dir, file)
-            # print("Processing file:", file)
+            print("Processing file:", file)
             command = f"/usr/bin/time -v valgrind --tool=callgrind {executable} < {input_path}"
             # print("Command:", command)
             
@@ -137,7 +137,7 @@ def detect_input_type(code):
     
     return "Unknown"
 
-def Calling_for_analysis(Code,Type,Parallel):
+def Calling_for_analysis(Code,Type):
 
     Code = indent_cpp_code(Code)
     Loops = LoopBlocks(Code)
@@ -154,6 +154,9 @@ def Calling_for_analysis(Code,Type,Parallel):
 
 
     # getting the insights
-    df = get_Insights(Parallel, "Code.cpp", "Inputs/" + Loop_found)
+    df = get_Insights(Type, "Code.cpp", "Inputs/" + Loop_found)
+    
+    # deleting the Code.cpp file
+    os.remove("Code.cpp")
 
     return df

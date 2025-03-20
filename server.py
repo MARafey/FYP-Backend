@@ -87,16 +87,27 @@ def login():
     return jsonify({'success': False, 'message': 'Invalid email or password!'}), 401
 
 
-@app.route('/Analysis',methods=['POST'])
-def Analitics():
+@app.route('/Analysis', methods=['POST'])
+def Analysis():
     data = request.get_json()
+    
+    # print(f"data= {data}")
+    
+    # printing the data
+    # for key in data:
+    #     print(key, ":", data[key], "\n")
+    # print(data["P_Code"]) 
+    data = data.get('body')
+    # print(f"data= {data}")   
     P_Code = data.get('P_Code')
     S_Code = data.get('S_Code')
-    input_dir = data.get('input_dir')
+    
+    if P_Code is None or S_Code is None:
+        return jsonify({'error': 'P_Code and S_Code are required!'}), 400
 
-    P_Code = '#include<omp.h>\n' +'#Define tile_size=16\n'+ P_Code
-    P_Analysis = Calling_for_analysis(P_Code, 1, input_dir)
-    S_Analysis = Calling_for_analysis(S_Code, 0, input_dir)
+    P_Code = '#include<omp.h>\n' + '#define tile_size=16\n' + P_Code
+    P_Analysis = Calling_for_analysis(P_Code, 1)
+    S_Analysis = Calling_for_analysis(S_Code, 0)
 
     return jsonify({'P_Analysis': P_Analysis, 'S_Analysis': S_Analysis}), 200
 

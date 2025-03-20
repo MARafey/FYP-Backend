@@ -1,0 +1,30 @@
+{
+    "1": {
+        "Loop": "for (int i = 0; i < row1; i++) {\n    for (int j = 0; j < col2; j++) {\n      result[i][j] = 0;\n      for (int k = 0; k < col1; k++) {\n        result[i][j] += firstMatrix[i][k] * secondMatrix[k][j];\n      }\n    }\n  }",
+        "Parallelized_Loop": "#pragma omp parallel for shared(col1, col2, firstMatrix, result, row1,         \\\n                                    secondMatrix)\nfor (int i = 0; i < row1; i++) {\n  for (int j = 0; j < col2; j++) {\n    result[i][j] = 0;\n    for (int k = 0; k < col1; k++) {\n      result[i][j] += firstMatrix[i][k] * secondMatrix[k][j];\n    }\n  }\n}",
+        "Tiled_Loop": "Not Tiled",
+        "Complexity": 62,
+        "Complexity_Class": 5
+    },
+    "2": {
+        "Loop": "for (int i = 0; i < row; i++) {\n    for (int j = 0; j < col; j++) {\n      cout << matrix[i][j] << \" \";\n    }\n    cout << endl;\n  }",
+        "Tiled_Loop": "for (int i_tile = 0; i_tile < row; i_tile += tile_size) {\n  for (int i = i_tile; i < std::min(i_tile + tile_size, row); ++) {\n    {\n      for (int j_tile = 0; j_tile < col; j_tile += tile_size) {\n        for (int j = j_tile; j < std::min(j_tile + tile_size, col); ++) {\n          {\n            cout << matrix[i][j] << \" \";\n          }\n          cout << endl;\n        }\n      }\n    }\n  }\n}",
+        "Parallelized_Loop": "Not Parallelizable",
+        "Complexity": 39,
+        "Complexity_Class": 3
+    },
+    "3": {
+        "Loop": "for (int i = 0; i < row1; i++)\n    for (int j = 0;",
+        "Parallelized_Loop": "#pragma omp parallel for\nfor (int i = 0; i < row1; i++)\n    for (int j = 0;",
+        "Tiled_Loop": "Not Tiled",
+        "Complexity": 20,
+        "Complexity_Class": 1
+    },
+    "4": {
+        "Loop": "for (int i = 0; i < row2; i++)\n    for (int j = 0;",
+        "Parallelized_Loop": "#pragma omp parallel for\nfor (int i = 0; i < row2; i++)\n    for (int j = 0;",
+        "Tiled_Loop": "Not Tiled",
+        "Complexity": 20,
+        "Complexity_Class": 1
+    }
+}
