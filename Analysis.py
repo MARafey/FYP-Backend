@@ -4,6 +4,7 @@ import csv
 import re
 import glob
 import pandas as pd
+from Parinomo import indent_cpp_code, LoopBlocks
 
 
 def get_Insights(parallel, cpp_file, input_dir):
@@ -95,12 +96,64 @@ def get_Insights(parallel, cpp_file, input_dir):
     return df
 
 
+def detect_input_type(code):
+    # Regex patterns for loop structures
+    loop_pattern = re.compile(r'\b(for|while|do)\b[^{]*{')
+    
+    # Regex patterns for input types
+    one_d_array = re.compile(r'\bcin\s*>>\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\[\s*[a-zA-Z0-9_]+\s*\]')
+    two_d_array = re.compile(r'\bcin\s*>>\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\[\s*[a-zA-Z0-9_]+\s*\]\s*\[\s*[a-zA-Z0-9_]+\s*\]')
+    graph = re.compile(r'\bcin\s*>>\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*>>\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*;')
+    weighted_graph = re.compile(r'\bcin\s*>>\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*>>\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*>>\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*;')
+    
+    # Find all loops
+    loop_blocks = loop_pattern.findall(code)
+    
+    # Checking inside loop bodies
+    for match in re.finditer(loop_pattern, code):
+        loop_body_start = match.end()
+        loop_body = code[loop_body_start:]
+        
+        # Find first closing brace to extract only loop content
+        brace_count = 1
+        for i, char in enumerate(loop_body):
+            if char == '{':
+                brace_count += 1
+            elif char == '}':
+                brace_count -= 1
+                if brace_count == 0:
+                    loop_body = loop_body[:i]
+                    break
+        
+        # Check input type
+        if re.search(two_d_array, loop_body):
+            return "2 D Array"
+        elif re.search(one_d_array, loop_body):
+            return "1 D Array"
+        elif re.search(weighted_graph, loop_body):
+            return "Weighted Graph"
+        elif re.search(graph, loop_body):
+            return "Graph"
+    
+    return "Unknown"
+
 def Calling_for_analysis(Code,Type,Parallel):
+
+    Code = indent_cpp_code(Code)
+    Loops = LoopBlocks(Code)
     # saving the Code string in a cpp file
     with open("Code.cpp", "w") as file:
         file.write(Code)
 
+    # finding the input type where will be cin statements
+    Loop_found = ''
+    for loop in Loops:
+        if detect_input_type(loop) == True:
+            Loop_found = loop
+            break
+
+
     # getting the insights
-    df = get_Insights(Parallel, "Code.cpp", "Inputs/1 D Arrays")
+    df = get_Insights(Parallel, "Code.cpp", "Inputs/" + Loop_found)
 
     return df
