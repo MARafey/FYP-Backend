@@ -138,7 +138,7 @@ def get_Insights(parallel, cpp_file, input_dir, num_runs=5):
                 if metric == "Instruction References (I refs)" or "Context Switches" in metric or "Faults" in metric or "Inputs" in metric or "Outputs" in metric or "RSS" in metric:
                     avg_results.append(int(avg_value))
                 else:
-                    avg_results.append(round(avg_value, 2))
+                    avg_results.append(avg_value)
             
             # Add to results
             results.append(avg_results)
